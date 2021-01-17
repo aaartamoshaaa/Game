@@ -13,12 +13,13 @@ class Client(Socket):
         address = (address[0], int(address[1]))
         try:
             self.socket.connect(address)
-            self.socket.setblocking(False)
         except ConnectionRefusedError:
             print('Unable to connect')
             exit(0)
 
-    async def listen_socket(self, listen_socket=None):
+        self.socket.setblocking(False)
+
+    async def listen_socket(self, listened_socket=None):
         while True:
             data = await self.main_loop.sock_recv(self.socket, PACKET_SIZE)
             print(data.decode('utf-8'))

@@ -13,14 +13,11 @@ class Server(Socket):
         self.port = 256
 
     def set_up(self):
-        print('Run setup...')
-        print(f'Binding on {self.ip}:{self.port}...')
         self.socket.bind((self.ip, self.port))
-        print('Binding done')
         self.socket.listen(self.max_players_count)
         print(f'Listening for {self.max_players_count} players...')
         self.socket.setblocking(False)
-        print("Server is listening")
+        print('-' * 20, f"{self.ip}:{self.port}", '-' * 20, sep='\n')
 
     async def send_data(self, data=None):
         for player in self.players:
@@ -55,5 +52,4 @@ class Server(Socket):
 if __name__ == '__main__':
     server = Server(2)
     server.set_up()
-
     server.start()
