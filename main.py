@@ -1,97 +1,68 @@
-import pygame
 import math
-import sys
+
+FPS = 1440
+SPEED = 600 / FPS
 
 
-def exit(status=False):
-    if status:
-        print(status)
-        input()
-    sys.exit()
+class SpaceShip:
+    def __init__(self, id, position, angle, abilities, health, image_file):
+        # color is needed for identify players
+        self.id = id
+        # Coordinates of the spaceship on board
+        self.x, self.y = position
+        # angle of movement and look-angle
+        self.angle = angle
+        # color is needed for identify enemies and player
+        # abilities is a list of perks for this spaceship
+        self.abilities = abilities
+        # health is health
+        self.health = health
+        # image what will be used for drawing spaceship on screen
+        self.icon = image_file
 
+    def render(self):
+        # todo Redraw spaceship image here
+        pass
 
-class PygameSurface(pygame.Surface):
-    def __init__(self, size, mode=0, flipNow=True):
-        super().__init__(size)
-        self.size = size
-        self.display = pygame.display.set_mode(self.size, mode)
-        if flipNow:
-            self.flip()
+    def rotate_by_angle(self, delta):
+        """
+        Increase angle by delta
+        """
+        self.angle += delta
+        self.angle %= 360
+        self.render()  # can be unnecessary
 
-    def get_display(self):
-        return self.display
+    def rotate(self, *args):
+        """
+        Function used to turn spaceship to coordinates
+        If given 1 arg it must be tuple or list of x and y coordinates
+        or 2 args as x and y
+        for example rotate((123, 321)) or rotate(123, 321);
+        """
+        x, y = 0, 0
+        if len(args) == 1:  # 1 argument - position (iterable)
+            x, y = args[0]
+        elif len(args) == 2:  # 2 arguments (x and y)
+            x, y = args[:2]
+        new_angle = round(math.atan((x - self.x) / (y - self.y)))
+        self.angle = new_angle
+        self.angle %= 360
+        self.render()  # can be unnecessary
 
-    def flip(self):
-        pygame.display.flip()
+    def get_position(self):
+        return self.x, self.y
 
-    def set_caption(self, caption):
-        pygame.display.set_caption(caption)
-
-    def fill(self, color):
-        self.display.fill(color)
-
-
-class Creature:
-    def __init__(self, surface, position=None, visible=True, enable=True):
-        self.surface = surface
-        self.position = position
-        self.visible = visible
-        self.enable = enable
-
-    def destroy(self):
-        del self
+    def get_angle(self):
+        return self.angle
 
     def set_position(self, position):
-        self.position = position
+        self.x, self.y = position
 
-    def set_visible(self, visible):
-        self.visible = visible
-
-    def set_enable(self, enable):
-        self.enable = enable
+    def set_angle(self, angle):
+        self.angle = angle
+        self.angle %= 360
 
 
-class CreatureCircle(Creature):
-    def __init__(self, surface, position=(0, 0), size=0, color=(255, 255, 0),
-                 direction=3 * 3.14 / 4):
-        super().__init__(surface, position)
-        self.size = size
-        self.color = color
-        self.direction = direction
-        self.xx, self.yy = -1, -1
-
-    def draw(self):
-        if not self.enable:
-            return
-        pygame.draw.circle(self.surface, self.color, self.position, int(self.size))
-
-    def tick(self, fps):
-        if not self.enable:
-            return
-        resize = .1 * (1000 / fps)
-        self.size = self.size + resize
-
-
-FPS = 60
-clock = pygame.time.Clock()
-
-size = (500, 500)
-display = PygameSurface(size=size)
-display.set_caption('Шар')
-circle = CreatureCircle(display.get_display())
-circle.set_enable(False)
-
-while True:
-    display.fill((0, 0, 255))
-    circle.draw()
-    circle.tick(FPS)
-    display.flip()
-
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            exit()
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            del circle
-            circle = CreatureCircle(display.get_display(), pygame.mouse.get_pos())
-
-    clock.tick(FPS)
+class Observer:
+    pass
+    # todo here must be pygame logic; move spaceship here
