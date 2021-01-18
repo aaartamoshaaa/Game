@@ -28,7 +28,7 @@ class enemy(player):
         pygame.draw.rect(screen, (self.color), (randint(100, 600), randint(100, 300), 50, 50))
 
 
-if __name__ == '__main__':
+def game():
     pygame.init()
     size = width, height = 800, 400
     screen = pygame.display.set_mode(size)
@@ -37,6 +37,7 @@ if __name__ == '__main__':
     player2 = enemy((200, 200), 'green')
     clock = pygame.time.Clock()
     running = True
+
     while running:
         # внутри игрового цикла ещё один цикл
         # приема и обработки сообщений
@@ -55,3 +56,6 @@ if __name__ == '__main__':
         pygame.display.flip()
         clock.tick(FPS)
     pygame.quit()
+
+
+game()
