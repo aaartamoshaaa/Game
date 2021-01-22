@@ -1,5 +1,9 @@
 import pygame
 import sys
+import protocol
+import socket
+import threading
+import time
 
 WIDTH, HEIGHT = 1280, 720
 _window = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -25,6 +29,7 @@ class Model:
 
 class Player(Model):
     def move(self, *args):
+        self.x, self.y = args[:2]
         keys = pygame.key.get_pressed()
         if keys[pygame.K_w]:
             self.y -= self.speed
@@ -38,8 +43,8 @@ class Player(Model):
 
 
 class Enemy(Model):
-    def move(self, x, y):
-        self.x, self.y = x, y
+    def move(self, *args):
+        self.x, self.y = args[:2]
         super(Enemy, self).move()
 
 
@@ -50,17 +55,49 @@ def redraw_window(*objects):
     pygame.display.update()
 
 
+data = None
+send = None
+ID = int(input('Your id'))
+
+
+def get_data(server, player, enemy):
+    data = list(server.recv(protocol.PACKET_SIZE))
+    print('data', data)
+    who = int.from_bytes(data[:1], byteorder='big', signed=True)
+    print('who', who)
+    coors = [int.from_bytes(data[i:i + 2], byteorder='big', signed=True) for i in range(1, len(data), 2)]
+    print('GET', coors)
+    if who == ID:
+        player.move(*coors)
+    else:
+        enemy.move(*coors)
+
+
+def send_coors(s, player):
+    who = ID.to_bytes(byteorder='big', signed=True, length=1)
+    x = player.x.to_bytes(byteorder='big', signed=True, length=2)
+    y = player.y.to_bytes(byteorder='big', signed=True, length=2)
+    s.sendall(who + x + y)
+
+
 def main():
-    player = Player(50, 50, 75, 75, (0, 255, 0))
-    enemy = Enemy(350, 350, 75, 75, (255, 0, 0))
+    s = socket.socket()
+    s.connect(
+        ('127.0.1.1', 255)
+    )
+    player = Player(*map(int, input('Player   >>>   ').split()), 75, 75, (0, 255, 0))
+    enemy = Enemy(*map(int, input('Enemy   >>>   ').split()), 75, 75, (255, 0, 0))
     clock = pygame.time.Clock()
+    # threading.Thread(target=send_coors, args=(s, player)).start()
+    # threading.Thread(target=get_data, args=(s, player, enemy)).start()
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit(0)
-        player.move()
-        enemy.move(350, 350)
+        get_data(s, player, enemy)
+        send_coors(s, player)
+        player.move(player.x, player.y)
         redraw_window(player, enemy)
         clock.tick(60)
 

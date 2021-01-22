@@ -50,7 +50,6 @@ class Server:
         else:
             print('[INFO] Server stopped')
             sys.exit(0)
-            exit(0)
 
     def setup(self):
         try:
@@ -88,22 +87,20 @@ class Server:
             print('[INFO] All users are connected')
             # all users are connected
             for user, address in self._users:
-                new_listening_thread = StoppableThread(
-                    target=self.__listening_thread__,
-                    args=(user, address)
-                )
-                new_sending_thread = StoppableThread(
-                    target=self.__sending_thread__,
-                    args=(user, address)
-                )
-                self.__threads.append(new_sending_thread)
-                self.__threads.append(new_listening_thread)
-                new_listening_thread.start()
-                new_sending_thread.start()
+                # new_listening_thread = StoppableThread(target=self.__listening_thread__, args=(user, address))
+                # new_sending_thread = StoppableThread(target=self.__sending_thread__, args=(user, address))
+                # self.__threads.append(new_sending_thread)
+                # self.__threads.append(new_listening_thread)
+                # new_listening_thread.start()
+                # new_sending_thread.start()
+                new_repeating_thread = StoppableThread(target=self.__repeating_thread_, args=(user, address))
+                self.__threads.append(new_repeating_thread)
+                new_repeating_thread.start()
 
     def __warning_thread__(self, waiting_user, user_address):
         try:
-            waiting_user.send('Wait for others please'.encode())
+            # todo remove this shit
+            # waiting_user.send_coors('Wait for others please'.encode())
             while not self.__all_users_connected__:
                 waiting_user.recv(protocol.PACKET_SIZE)
         except socket.error as error_message:
@@ -116,7 +113,7 @@ class Server:
         while self.__all_users_connected__:
             try:
                 data = user_socket.recv(protocol.PACKET_SIZE)
-                print(f'[FROM <{user_address}>] {self.data_processing(data)}')
+                print(f'[FROM <{user_address}>] {data}')
                 if not data:
                     print(f'[INFO] User <{user_address}> disconnected')
                     self.__all_users_connected__ = False
@@ -145,14 +142,33 @@ class Server:
                 print('[INFO] Server stopped')
                 break
 
+    def __repeating_thread_(self, user_socket, user_address):
+        while self.__all_users_connected__:
+            try:
+                data = user_socket.recv(protocol.PACKET_SIZE)
+                print(f'[FROM <{user_address}>] {data}')
+                if not data:
+                    print(f'[INFO] User <{user_address}> disconnected')
+                    self.__all_users_connected__ = False
+                    self._users.remove((user_socket, user_address))
+                    break
+                else:
+                    user_socket.sendall(self.__send_data)
+                    print(f'[INFO] Data sent to <{user_address}>')
+            except socket.error as error_message:
+                print(f'[ERROR] {error_message}')
+                print('[INFO] Closing server')
+                self._socket.close()
+                print('[INFO] Server stopped')
+                break     
+
     def send(self, data):
         self.__send_data = data
 
     def get(self):
-        return self.__get_data
-
-    def data_processing(self, data):
-        return (data, type(data))
+        data = self.__get_data
+        self.__get_data = None
+        return data
 
 
 def listen(s):
@@ -166,14 +182,13 @@ def listen(s):
 def start():
     s = Server()
 
-    t = threading.Thread(
+    command_thread = threading.Thread(
         target=listen,
         args=(s,)
     )
-    t.start()
+    command_thread.start()
 
     s.start()
-    s.send('Hi!'.encode())
 
 
 if __name__ == "__main__":
