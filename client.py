@@ -2,12 +2,11 @@ import pygame
 import sys
 import protocol
 import socket
-import threading
-import time
 
 WIDTH, HEIGHT = 1280, 720
-_window = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption('Client')
+_window = None
+my_id = 0
+s = None
 
 
 class Model:
@@ -28,8 +27,8 @@ class Model:
 
 
 class Player(Model):
-    def move(self, *args):
-        self.x, self.y = args[:2]
+    def move(self):
+        global my_id
         keys = pygame.key.get_pressed()
         if keys[pygame.K_w]:
             self.y -= self.speed
@@ -40,64 +39,55 @@ class Player(Model):
         if keys[pygame.K_d]:
             self.x += self.speed
         super(Player, self).move()
+        send_coors(s, my_id, self.x, self.y)
 
 
 class Enemy(Model):
-    def move(self, *args):
-        self.x, self.y = args[:2]
+    def move(self):
         super(Enemy, self).move()
 
 
 def redraw_window(*objects):
+    global s, my_id
+    get_data(s, my_id, objects[0], objects[1])
     _window.fill((255, 255, 255))
     for element in objects:
         element.draw(_window)
     pygame.display.update()
 
 
-data = None
-send = None
-ID = int(input('Your id'))
-
-
-def get_data(server, player, enemy):
-    data = list(server.recv(protocol.PACKET_SIZE))
-    print('data', data)
-    who = int.from_bytes(data[:1], byteorder='big', signed=True)
-    print('who', who)
-    coors = [int.from_bytes(data[i:i + 2], byteorder='big', signed=True) for i in range(1, len(data), 2)]
-    print('GET', coors)
-    if who == ID:
-        player.move(*coors)
+def get_data(server, ID, player, enemy):
+    _id, x, y, angle, _type = protocol.from_bytes(server.recv(protocol.PACKET_SIZE))
+    if _id == ID:
+        player.x, player.y, = x, y
     else:
-        enemy.move(*coors)
+        enemy.x, enemy.y, = x, y
 
 
-def send_coors(s, player):
-    who = ID.to_bytes(byteorder='big', signed=True, length=1)
-    x = player.x.to_bytes(byteorder='big', signed=True, length=2)
-    y = player.y.to_bytes(byteorder='big', signed=True, length=2)
-    s.sendall(who + x + y)
+def send_coors(s, _id, x, y):
+    s.send(protocol.from_data(_id, x, y, 0, 0))
 
 
 def main():
+    global _window, my_id, s
+    _window = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption('Client')
     s = socket.socket()
-    s.connect(
-        ('127.0.1.1', 255)
-    )
-    player = Player(*map(int, input('Player   >>>   ').split()), 75, 75, (0, 255, 0))
-    enemy = Enemy(*map(int, input('Enemy   >>>   ').split()), 75, 75, (255, 0, 0))
+    s.connect(('92.242.40.206', 255))
+    _id, x, y, angle, _type = protocol.from_bytes(s.recv(protocol.PACKET_SIZE))
+    my_id = _id
+    ide, xe, ye, ae, te = protocol.from_bytes(s.recv(protocol.PACKET_SIZE))
+    player = Player(x, y, 30, 30, (0, 255, 0))
+    enemy = Enemy(xe, ye, 30, 30, (255, 0, 0))
     clock = pygame.time.Clock()
-    # threading.Thread(target=send_coors, args=(s, player)).start()
-    # threading.Thread(target=get_data, args=(s, player, enemy)).start()
+
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit(0)
-        get_data(s, player, enemy)
-        send_coors(s, player)
-        player.move(player.x, player.y)
+
+        player.move()
         redraw_window(player, enemy)
         clock.tick(60)
 
