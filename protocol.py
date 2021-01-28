@@ -1,6 +1,12 @@
 PACKET_SIZE = 8
 
 
+class PacketType:
+    MOVEMENT = 0
+    SHOOT = 1
+    LASER = 2
+
+
 def from_bytes(packet: bytes):
     """
     PACKET STRUCTURE
@@ -17,7 +23,7 @@ def from_bytes(packet: bytes):
             2+ - perks ( see specs )
     """
     if len(packet) != PACKET_SIZE:
-        raise ValueError(f'Length of packet must be {PACKET_SIZE}')
+        raise ValueError(f'Length of packet must be {PACKET_SIZE}. Get: {packet} where len = {len(packet)}')
     data = packet[0], packet[1:3], packet[3:5], packet[5:7], packet[7]
     _id = data[0]
     x = int.from_bytes(data[1], 'big', signed=True)
@@ -48,7 +54,3 @@ def from_data(_id, x, y, angle, _type):
     _angle = angle.to_bytes(2, 'big', signed=True)
     _type = _type.to_bytes(1, 'big', signed=True)
     return _id + _x + _y + _angle + _type
-
-
-
-

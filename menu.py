@@ -1,10 +1,12 @@
+import socket
 import sys
-
 import pygame
 import pygame_gui
-from random import randint
+from main import *
+from protocol import *
 
-FPS = 1440
+IP = ''
+PORT = 0
 SIZE = WIDTH, HEIGHT = 800, 400
 THEME_COLOR_MAIN = "#0f3460"
 THEME_COLOR_PINK = "#e94560"
@@ -12,35 +14,11 @@ THEME_COLOR_ORANGE = "#ff9900"
 THEME_COLOR_DARK = "#1a1a2e"
 
 
-class player:
-    def __init__(self, position, color):
-        self.x, self.y = position
-        self.color = color
-
-    def move(self):
-        if pygame.key.get_pressed()[pygame.K_LEFT]:
-            self.x -= 30 / FPS * 20
-        if pygame.key.get_pressed()[pygame.K_RIGHT]:
-            self.x += 30 / FPS * 20
-        if pygame.key.get_pressed()[pygame.K_UP]:
-            self.y -= 30 / FPS * 20
-        if pygame.key.get_pressed()[pygame.K_DOWN]:
-            self.y += 30 / FPS * 20
-
-    def render(self, screen):
-        pygame.draw.rect(screen, (self.color), (self.x, self.y, 50, 50))
-
-
-class enemy(player):
-    def render(self, screen):
-        pygame.draw.rect(screen, (self.color), (randint(100, 600), randint(100, 300), 50, 50))
-
-
 def main_menu():
     running = True
     while running:
         screen.fill(THEME_COLOR_MAIN)
-        time_delta = clock.tick(60) / 1000
+        time_delta = clock.tick(FPS) / 1000
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -54,14 +32,15 @@ def main_menu():
         manager_main.update(time_delta)
         manager_main.draw_ui(screen)
         pygame.display.update()
-        clock.tick(60)
+        clock.tick(FPS)
 
 
 def ip_want():
+    global IP, PORT
     running = True
     while running:
         screen.fill(THEME_COLOR_MAIN)
-        time_delta = clock.tick(60) / 1000
+        time_delta = clock.tick(FPS) / 1000
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -75,35 +54,33 @@ def ip_want():
                     # if event.ui_element == play_button:
                     #     pass
                 if event.user_type == pygame_gui.UI_TEXT_ENTRY_FINISHED:
-                    print(event.text)
+                    IP, PORT = event.text.split(':')
+                    PORT = int(PORT)
                     game()
             manager_ip.process_events(event)
 
         manager_ip.update(time_delta)
         manager_ip.draw_ui(screen)
         pygame.display.update()
-        clock.tick(60)
+        clock.tick(FPS)
 
 
 def game():
-    player1 = player((100, 100), THEME_COLOR_PINK)
-    player2 = enemy((200, 200), THEME_COLOR_ORANGE)
-
+    global IP, PORT
+    # ('92.242.40.206', 255)
+    # 92.242.40.206:255
+    observer = Observer((IP, PORT), screen)
     running = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-        player1.move()
-        player2.move()
+        observer.move_rival()
         screen.fill(THEME_COLOR_MAIN)
-        player1.render(screen)
-        player2.render(screen)
-
+        observer.update()
         pygame.display.update()
         clock.tick(FPS)
-
 
 pygame.init()
 screen = pygame.display.set_mode(SIZE)
