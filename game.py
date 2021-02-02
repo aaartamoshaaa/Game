@@ -71,8 +71,6 @@ observer = None
 
 def game():
     global IP, PORT, observer
-    # ('92.242.40.206', 255)
-    # 92.242.40.206:255
     observer = Observer((IP, PORT), screen)
     running = True
     while running:
