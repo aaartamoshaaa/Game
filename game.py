@@ -1,7 +1,7 @@
 import sys
 import pygame
 import pygame_gui
-from library import *
+
 
 IP = ''
 PORT = 0
