@@ -1,7 +1,8 @@
+import sys
+
 import pygame
 import pygame_gui
-from pygame_gui.elements import UILabel, UIButton
-import sys
+from pygame_gui.elements import UIButton, UILabel, UITextEntryLine
 
 FPS = 100
 
@@ -74,8 +75,16 @@ class UI:
     Right = 3
     Left = 4
 
-    def __init__(self, elements, width=Window.width, height=Window.height,
-                 hor_layout=Right, ver_layout=Top, margin=Margin.all(0), padding=Padding.all(0)):
+    def __init__(
+        self,
+        elements,
+        width=Window.width,
+        height=Window.height,
+        hor_layout=Right,
+        ver_layout=Top,
+        margin=Margin.all(0),
+        padding=Padding.all(0)
+    ):
         self.manager = pygame_gui.UIManager((width, height), Theme.file)
         self.handlers = []
         self.element_ids = []
@@ -121,6 +130,7 @@ class UI:
 
     def draw(self, screen):
         self.handle_events()
+        self.manager.update(1000/FPS)
         self.manager.draw_ui(screen)
 
     def add_handler(self, function):
@@ -144,16 +154,20 @@ class Game:
         self.clock = pygame.time.Clock()
         self.current_interface = None
         self.interfaces = {}
+        self.global_handlers = []
 
     def add_interface(self, name, interface):
         self.interfaces[name] = interface
+        for global_handler in self.global_handlers:
+            self.interfaces[name].add_handler(global_handler)
 
     def add_handler(self, interface_name, handler):
         self.interfaces[interface_name].add_handler(handler)
 
     def add_global_handler(self, handler):
-        for interface in self.interfaces:
-            self.interfaces[interface].add_handler(handler)
+        self.global_handlers.append(handler)
+        for name in self.interfaces:
+            self.interfaces[name].add_handler(handler)
 
     def set_interface(self, name):
         self.current_interface = self.interfaces[name]
@@ -162,84 +176,70 @@ class Game:
         done = False
         while not done:
             self.screen.fill(Theme.Colors.main)
-            self.current_interface.manager.update(1000/FPS)
             self.current_interface.draw(self.screen)
             pygame.display.update()
             self.clock.tick(FPS)
+
+
+def main_menu_events_handler(event):
+    if event.type == pygame.USEREVENT:
+        if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
+            if event.ui_object_id == 'exit-button':
+                pygame.quit()
+                sys.exit(0)
+
 
 def exit_event_handler(event):
     if event.type == pygame.QUIT:
         pygame.quit()
         sys.exit(0)
 
-def change_interface(event, button_id, obj, new_interface_name):
+
+def change_interface(event, button_id, game_object, new_interface_name):
     if event.type == pygame.USEREVENT:
         if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
             if event.ui_object_id == button_id:
-                obj.set_interface(new_interface_name)
-
-def main_handler(event): 
-    if event.type == pygame.USEREVENT:
-        if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
-            if event.ui_object_id == 'exit':
-                pygame.quit()
-                sys.exit(0)
+                game_object.set_interface(new_interface_name)
 
 
 if __name__ == '__main__':
     game = Game()
-    game.add_interface(
-        name = 'main', 
-        interface = UI(
-            elements=[
-                UIElement(UILabel, 300, 50, text='SpaceShip Game'),
-                UIElement(UIButton, 100, 50, text='Play', ui_id='play'),
-                UIElement(UIButton, 100, 50, text='Volume', ui_id='volume'),
-                UIElement(UIButton, 100, 50, text='Exit', ui_id='exit')
-            ],
-            hor_layout=UI.Center,
-            ver_layout=UI.Top,
-            margin=Margin.only(bottom=10),
-            padding=Padding.all(0),
-        )
-    )
-    game.add_handler(interface_name='main', handler=main_handler)
 
     game.add_interface(
-        name='game',
-        interface = UI(
+        'main',
+        interface=UI(
             elements=[
-                UIElement(UILabel, 300, 50, text='Game'),
+                UIElement(UILabel, 300, 50, text='SPACESHIPS'),
+                UIElement(UIButton, 200, 75, text='PLAY', ui_id='play-button'),
+                UIElement(UIButton, 200, 75, text='EXIT', ui_id='exit-button')
             ],
             hor_layout=UI.Center,
             ver_layout=UI.Top,
-            margin=Margin.all(0),
-            padding=Padding.all(0),
+            padding=Padding.all(200),
+            margin=Margin.only(bottom=30)
         )
     )
-    game.add_handler('main', handler=lambda event: 
-        change_interface(event, 'play', game, 'game')
-    )
-    game.add_interface(
-        name='settings',
-        interface = UI(
-            elements=[
-                UIElement(UILabel, 300, 50, text='Volume'),
-                UIElement(UIButton, 100, 50, text='Back', ui_id='back')
-            ],
-            hor_layout=UI.Center,
-            ver_layout=UI.Top,
-            margin=Margin.all(0),
-            padding=Padding.all(0),
-        )
-    )
-    game.add_handler('settings', handler=lambda event:
-        change_interface(event, 'back', game, 'main')
-    )
-    game.add_handler('main', handler=lambda event:
-        change_interface(event, 'volume', game, 'settings')
-    )
+    game.add_handler(interface_name='main', handler=main_menu_events_handler)
 
-    game.add_global_handler(exit_event_handler)
+    game.add_interface(
+        'ip-entry',
+        interface=UI(
+            elements=[
+                UIElement(UILabel, 300, 50, text='Enter server IP address'),
+                UIElement(UITextEntryLine, 300, 50)
+            ],
+            hor_layout=UI.Center,
+            ver_layout=UI.Top,
+            padding=Padding.all(0),
+            margin=Margin.only(bottom=10)
+        )
+    )
+    game.add_handler(
+        interface_name='main',
+        handler=lambda event:
+            change_interface(event, 'play-button', game, 'ip-entry')
+    )
     game.set_interface('main')
+    game.add_global_handler(exit_event_handler)
     game.start()
+    # todo Make swap to game, ip entry
