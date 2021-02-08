@@ -185,6 +185,24 @@ class Game:
             pygame.display.update()
             self.clock.tick(FPS)
 
+def exit_event_handler(event):
+    if event.type == pygame.QUIT:
+        pygame.quit()
+        sys.exit(0)
+
+def change_interface(event, button_id, obj, new_interface_name):
+    if event.type == pygame.USEREVENT:
+        if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
+            if event.ui_object_id == button_id:
+                obj.set_interface(new_interface_name)
+
+def main_handler(event): 
+    if event.type == pygame.USEREVENT:
+        if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
+            if event.ui_object_id == 'exit':
+                pygame.quit()
+                sys.exit(0)
+
 
 def main_menu_events_handler(event):
     if event.type == pygame.USEREVENT:
