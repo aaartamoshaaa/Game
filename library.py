@@ -8,7 +8,10 @@ SPEED = int(600 / FPS)
 
 
 class SpaceShip:
-    def __init__(self, id, position, angle, abilities, health, color, image_file):
+    def __init__(
+        self, id, position, angle,
+        abilities, health, color, image_file
+    ):
         """
         id is needed for identify players
         Position is coordinates of the spaceship on board
@@ -53,7 +56,7 @@ class Observer:
         self.screen = screen
         self.server = socket()
         self.server.connect(address)
-        self.server.settimeout(0.01)
+        self.server.settimeout(0.1)
 
         rival_id, rival_x, rival_y, rival_angle, packet_type = from_bytes(
             self.server.recv(PACKET_SIZE))
@@ -101,8 +104,11 @@ class Observer:
         return False
 
     def send(self):
-        bytes_data = from_data(self.rival.id, self.rival.x,
-                               self.rival.y, self.rival.angle, PacketType.MOVEMENT)
+        bytes_data = from_data(
+            self.rival.id, self.rival.x,
+            self.rival.y, self.rival.angle,
+            PacketType.MOVEMENT
+        )
         self.server.send(bytes_data)
 
     def update(self):

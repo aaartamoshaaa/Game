@@ -1,8 +1,9 @@
 import sys
-
 import pygame
 import pygame_gui
 from pygame_gui.elements import UIButton, UILabel, UITextEntryLine
+from library import Observer
+
 
 FPS = 100
 
@@ -156,10 +157,14 @@ class Game:
         self.interfaces = {}
         self.global_handlers = []
 
-    def add_interface(self, name, interface):
+    def get_screen(self):
+        return self.screen
+
+    def add_interface(self, name, interface, need_to_update_handlers=True):
         self.interfaces[name] = interface
-        for global_handler in self.global_handlers:
-            self.interfaces[name].add_handler(global_handler)
+        if need_to_update_handlers:
+            for global_handler in self.global_handlers:
+                self.interfaces[name].add_handler(global_handler)
 
     def add_handler(self, interface_name, handler):
         self.interfaces[interface_name].add_handler(handler)
@@ -204,7 +209,7 @@ def change_interface(event, button_id, game_object, new_interface_name):
 
 if __name__ == '__main__':
     game = Game()
-
+    # main menu
     game.add_interface(
         'main',
         interface=UI(
@@ -219,8 +224,12 @@ if __name__ == '__main__':
             margin=Margin.only(bottom=30)
         )
     )
-    game.add_handler(interface_name='main', handler=main_menu_events_handler)
-
+    # main menu buttons
+    game.add_handler(
+        interface_name='main',
+        handler=main_menu_events_handler
+    )
+    # ip entry menu
     game.add_interface(
         'ip-entry',
         interface=UI(
@@ -234,12 +243,17 @@ if __name__ == '__main__':
             margin=Margin.only(bottom=10)
         )
     )
+    # main -> ip entry
     game.add_handler(
         interface_name='main',
         handler=lambda event:
             change_interface(event, 'play-button', game, 'ip-entry')
     )
+    # main - 1st interface
     game.set_interface('main')
+
+    # TODO load game
+    # exit button (Native)
     game.add_global_handler(exit_event_handler)
+    # run game
     game.start()
-    # todo Make swap to game, ip entry
