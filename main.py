@@ -154,6 +154,10 @@ class Game:
         self.interfaces = {}
         self.global_handlers = []
         self.render_methods = []
+        self.additional_objects = {}
+
+    def add_additional_object(self, name, obj):
+        self.additional_objects[name] = obj
 
     def get_screen(self):
         return self.screen
@@ -226,6 +230,14 @@ def load_game(event, game):
             port = int(port)
             observer = Observer((ip, port), game.get_screen())
             game.add_render_method(observer.update)
+            game.add_additional_object('obs', observer)
+
+
+def quit_from_game(event, game):
+    if event.type == pygame.QUIT:
+        if game.additional_objects['obs']:
+            game.additional_objects['obs'].kill()
+        sys.exit(0)
 
 
 if __name__ == '__main__':
@@ -276,9 +288,12 @@ if __name__ == '__main__':
     # game menu
     game.add_interface(
         name='game',
-        interface=UI(elements=[
-            UIElement(UILabel, 300, 50, text='  ')
-        ])
+        interface=UI(elements=[]),
+        need_to_update_handlers=False  # we dont need global handlers here
+    )
+    game.add_handler(
+        interface_name='game',
+        handler=lambda event: quit_from_game(event, game)
     )
 
     # ip entry -> game
