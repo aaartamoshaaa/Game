@@ -12,13 +12,14 @@ int MAX_USERS = 2;
 List<int> IDS = [0, 1];
 
 //! FUNCTIONS
-void main() {
-  var ip = InternetAddress.anyIPv4;
+void main() async {
+  var sys_ip = await NetworkInterface.list();
+  var ip = sys_ip.first.addresses.first.address.toString();
   var port = 255;
-  print('Server openned on ${ip.address}:$port');
+  print('Server openned on ${ip}:$port');
   ServerSocket.bind(ip, port).then((ServerSocket server) {
     server.listen(registerClient);
-  });  
+  });
 }
 
 void registerClient(Socket client) {
@@ -66,7 +67,8 @@ class Client {
   }
 
   void removeClient() {
-    var client_data = '${this.socket.remoteAddress.address}:${this.socket.remotePort}';
+    var client_data =
+        '${this.socket.remoteAddress.address}:${this.socket.remotePort}';
     var isSuccessfully = clients.remove(this);
     IDS.add(this.id);
     print('$client_data >>> Return id ${this.id}');
@@ -83,7 +85,7 @@ class Client {
 
   void distributeMessage(Client client, Uint8List data) {
     for (Client c in clients) {
-       c.socket.add(data);
+      c.socket.add(data);
     }
   }
 }
