@@ -2,10 +2,7 @@ import sys
 import pygame
 import pygame_gui
 from pygame_gui.elements import UIButton, UILabel, UITextEntryLine
-from library import Observer
-
-
-FPS = 100
+from library import *
 
 
 class Window:
@@ -156,6 +153,7 @@ class Game:
         self.current_interface = None
         self.interfaces = {}
         self.global_handlers = []
+        self.render_methods = []
 
     def get_screen(self):
         return self.screen
@@ -182,11 +180,16 @@ class Game:
         while not done:
             self.screen.fill(Theme.Colors.main)
             self.current_interface.draw(self.screen)
+            for render_method in self.render_methods:
+                render_method()
             pygame.display.update()
             self.clock.tick(FPS)
 
+    def add_render_method(self, method):
+        self.render_methods.append(method)
 
-def main_handler(event): 
+
+def main_handler(event):
     if event.type == pygame.USEREVENT:
         if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
             if event.ui_object_id == 'exit':
@@ -213,6 +216,16 @@ def change_interface(event, button_id, game_object, new_interface_name):
         if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
             if event.ui_object_id == button_id:
                 game_object.set_interface(new_interface_name)
+
+
+def load_game(event, game):
+    if event.type == pygame.USEREVENT:
+        if event.user_type == pygame_gui.UI_TEXT_ENTRY_FINISHED:  
+            game.set_interface('game')
+            ip, port = event.text.split(':')
+            port = int(port)
+            observer = Observer((ip, port), game.get_screen())
+            game.add_render_method(observer.update)
 
 
 if __name__ == '__main__':
@@ -243,7 +256,7 @@ if __name__ == '__main__':
         interface=UI(
             elements=[
                 UIElement(UILabel, 300, 50, text='Enter server IP address'),
-                UIElement(UITextEntryLine, 300, 50)
+                UIElement(UITextEntryLine, 300, 50),
             ],
             hor_layout=UI.Center,
             ver_layout=UI.Top,
@@ -260,7 +273,19 @@ if __name__ == '__main__':
     # main - 1st interface
     game.set_interface('main')
 
-    # TODO load game
+    # game menu
+    game.add_interface(
+        name='game',
+        interface=UI(elements=[
+            UIElement(UILabel, 300, 50, text='  ')
+        ])
+    )
+
+    # ip entry -> game
+    game.add_handler(
+        interface_name='ip-entry',
+        handler=lambda event: load_game(event, game)
+    )
     # exit button (Native)
     game.add_global_handler(exit_event_handler)
     # run game

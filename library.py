@@ -56,7 +56,7 @@ class Observer:
         self.screen = screen
         self.server = socket()
         self.server.connect(address)
-        self.server.settimeout(0.1)
+        self.server.settimeout(0.5)
 
         rival_id, rival_x, rival_y, rival_angle, packet_type = from_bytes(
             self.server.recv(PACKET_SIZE))
@@ -84,7 +84,7 @@ class Observer:
         old = self.rival.get_angle()
         rel_x, rel_y = mouse_x - self.rival.x, mouse_y - self.rival.y
         self.rival.set_angle((180 / pi) * - atan2(rel_y, rel_x) - 90)
-        return self.rival.get_angle() != old
+        # return self.rival.get_angle() != old
 
     def move_rival(self):
         keys = pygame.key.get_pressed()
@@ -98,10 +98,10 @@ class Observer:
             x -= SPEED
         if keys[pygame.K_d]:
             x += SPEED
-        if (x, y) != old:
-            self.rival.set_position(x, y)
-            return True
-        return False
+        # if (x, y) != old:
+        #     self.rival.set_position(x, y)
+        #     return True
+        # return False
 
     def send(self):
         bytes_data = from_data(
@@ -112,14 +112,12 @@ class Observer:
         self.server.send(bytes_data)
 
     def update(self):
-        need_to_update = False
-        need_to_update |= self.move_rival()
-        need_to_update |= self.rotate_rival()
-        if need_to_update:
-            self.send()
+        self.move_rival()
+        self.rotate_rival()
+        self.send()
         try:
             some_id, some_x, some_y, some_angle, packet_type = from_bytes(
-                self.server.recv(10*PACKET_SIZE)[:PACKET_SIZE])
+                self.server.recv(3*PACKET_SIZE)[:PACKET_SIZE])
         except timeout:
             return
         else:
