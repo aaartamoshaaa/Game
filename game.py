@@ -1,7 +1,14 @@
 import sys
 import pygame
 import pygame_gui
-from library import *
+from game_objects import *
+
+
+# ----------------------------------------------------------------
+
+#  THIS MODULE DEPRECATED, DO NOT USE THIS
+
+# ----------------------------------------------------------------
 
 IP = ''
 PORT = 0

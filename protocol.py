@@ -10,8 +10,8 @@ class PacketType:
 def from_bytes(packet: bytes):
     """
     PACKET STRUCTURE
-    [ who (id of player) ] [ x coordinate ] [ y coordinate ] [ angle ] [ type of message ]
-    |______ 1 byte ______| |__ 2  bytes __| |__ 2  bytes __| |2 bytes| |____ 1  byte ____|
+[ who (id of player) ] [ x coordinate ] [ y coordinate ] [ angle ] [ type of message ]
+|______ 1 byte ______| |__ 2  bytes __| |__ 2  bytes __| |2 bytes| |____ 1  byte ____|
     id:
         unique numbers given from server to user on connecting
     x, y, angle:
