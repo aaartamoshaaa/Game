@@ -4,7 +4,7 @@ from pygame_gui.elements import UILabel, UIButton, UITextEntryLine
 # handlers
 from interface import main_menu_events_handler, \
     change_interface, quit_from_game, load_game, exit_event_handler
-# gam objects
+# game objects
 from interface import Game
 
 

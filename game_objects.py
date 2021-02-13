@@ -83,13 +83,15 @@ class Observer:
         mouse_x, mouse_y = pygame.mouse.get_pos()
         old = self.rival.get_angle()
         rel_x, rel_y = mouse_x - self.rival.x, mouse_y - self.rival.y
-        self.rival.set_angle((180 / pi) * - atan2(rel_y, rel_x) - 90)
-        # return self.rival.get_angle() != old
+        angle = (180 / pi) * - atan2(rel_y, rel_x) - 90
+        self.rival.set_angle(angle)
+        return int(angle)
 
     def move_rival(self):
+        pygame.event.pump()
         keys = pygame.key.get_pressed()
         x, y = self.rival.get_position()
-        old = (x, y)
+
         if keys[pygame.K_w]:
             y -= SPEED
         if keys[pygame.K_s]:
@@ -98,26 +100,21 @@ class Observer:
             x -= SPEED
         if keys[pygame.K_d]:
             x += SPEED
-        # if (x, y) != old:
-        #     self.rival.set_position(x, y)
-        #     return True
-        # return False
+        return x, y
 
-    def send(self):
+    def send(self, x, y, angle, packet_type):
         bytes_data = from_data(
-            self.rival.id, self.rival.x,
-            self.rival.y, self.rival.angle,
-            PacketType.MOVEMENT
+            self.rival.id, x, y, angle, packet_type
         )
         self.server.send(bytes_data)
 
     def update(self):
-        self.move_rival()
-        self.rotate_rival()
-        self.send()
+        x, y = self.move_rival()
+        angle = self.rotate_rival()
+        self.send(x, y, angle, PacketType.MOVEMENT)
         try:
             some_id, some_x, some_y, some_angle, packet_type = from_bytes(
-                self.server.recv(3*PACKET_SIZE)[:PACKET_SIZE])
+                self.server.recv(6*PACKET_SIZE)[:PACKET_SIZE])
         except timeout:
             return
         else:
@@ -133,3 +130,20 @@ class Observer:
 
     def kill(self):
         self.server.close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
