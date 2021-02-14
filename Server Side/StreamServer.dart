@@ -18,7 +18,10 @@ void main() async {
   var port = 255;
   print('Server openned on ${ip}:$port');
   ServerSocket.bind(ip, port).then((ServerSocket server) {
-    server.listen(registerClient);
+    server.listen(registerClient, onError: (error) {
+      print(error.message);
+      server.close();
+    });
   });
 }
 
@@ -67,6 +70,7 @@ class Client {
   }
 
   void removeClient() {
+    this.socket.close();
     var client_data =
         '${this.socket.remoteAddress.address}:${this.socket.remotePort}';
     var isSuccessfully = clients.remove(this);
@@ -85,7 +89,11 @@ class Client {
 
   void distributeMessage(Client client, Uint8List data) {
     for (Client c in clients) {
-      c.socket.add(data);
+      try {
+        c.socket.add(data);
+      } catch (SocketException) {
+        this.removeClient();
+      }
     }
   }
 }
