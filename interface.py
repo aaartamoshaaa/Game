@@ -1,7 +1,7 @@
 import sys
 import pygame
 import pygame_gui
-from game_objects import Observer, FPS
+from game_modules import Observer, FPS
 
 
 class Window:
@@ -175,7 +175,8 @@ def load_game(event, game):
             game.set_interface('game')
             ip, port = event.text.split(':')
             port = int(port)
-            observer = Observer((ip, port), game.get_screen())
+            observer = Observer(game.get_screen())
+            observer.connect((ip, port))
             game.add_render_method(observer.update)
             game.add_additional_object('obs', observer)
 
