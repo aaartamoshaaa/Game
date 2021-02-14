@@ -36,6 +36,7 @@ game.add_interface(
         elements=[
             UIElement(UILabel, 300, 50, text='Enter server IP address'),
             UIElement(UITextEntryLine, 300, 50),
+            UIElement(UIButton, 300, 50, text='Back', ui_id='return')
         ],
         hor_layout=UI.Center,
         ver_layout=UI.Top,
@@ -48,6 +49,11 @@ game.add_handler(
     interface_name='main',
     handler=lambda event:
         change_interface(event, 'play-button', game, 'ip-entry')
+)
+game.add_handler(
+    interface_name='ip-entry',
+    handler=lambda event:
+        change_interface(event, 'return', game, 'main')
 )
 # main - 1st interface
 game.set_interface('main')
