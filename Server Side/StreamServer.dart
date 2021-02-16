@@ -89,10 +89,12 @@ class Client {
 
   void distributeMessage(Client client, Uint8List data) {
     for (Client c in clients) {
-      try {
-        c.socket.add(data);
-      } catch (SocketException) {
-        this.removeClient();
+      if (c != client) {
+        try {
+          c.socket.add(data);
+        } catch (SocketException) {
+          this.removeClient();
+        }
       }
     }
   }
