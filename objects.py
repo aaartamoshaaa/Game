@@ -1,9 +1,8 @@
 from protocol import from_bytes, PACKET_SIZE, from_data, PacketType
 from socket import socket, timeout, error as socket_error
-from math import atan2, degrees
+from math import atan2, degrees, radians, cos, sin
 from pygame.locals import *
 import pygame
-
 
 FPS = 144
 SPACESHIPS_SPEED = 4
@@ -71,7 +70,13 @@ class AllySpaceShip(DynamicSprite):
         super(AllySpaceShip, self).__init__(
             object_id, position, angle, './Textures/Ally.png'
         )
-        self.perks_ready = pygame.sprite.Group()
+        self.perks_ready = []
+        self.render_objects = pygame.sprite.Group()
+        # ---------------------------
+
+        self.perks_ready.append(Perquisite)
+
+        # ---------------------------
         self.speed = SPACESHIPS_SPEED
 
     def update(self):
@@ -97,8 +102,16 @@ class AllySpaceShip(DynamicSprite):
             self.move((-self.speed, 0))
         if keys[K_d]:
             self.move((self.speed, 0))
+        if keys[K_q]:
+            if Perquisite in self.perks_ready:
+                x, y = pygame.mouse.get_pos()
+                self.render_objects.add(
+                    Perquisite(self, (x, y))
+                )
 
         # ---------------------------
+
+        self.render_objects.update()
 
 
 class EnemySpaceShip(DynamicSprite):
@@ -107,6 +120,14 @@ class EnemySpaceShip(DynamicSprite):
             object_id, position, angle, './Textures/Enemy.png'
         )
         self.speed = SPACESHIPS_SPEED
+        self.perks_ready = []
+
+        self.perks_ready.append(Perquisite)
+
+        self.render_objects = pygame.sprite.Group()
+
+    def update(self):
+        self.render_objects.update()
 
 
 class Observer:
@@ -143,9 +164,16 @@ class Observer:
 
     def send(self, spaceship, packet_type):
         byte_data = from_data(
-            *spaceship.information, PacketType.MOVEMENT
+            *spaceship.information, packet_type
         )
         self.server.send(byte_data)
+
+        for perquisite in spaceship.render_objects:
+            to_send = perquisite.information
+            if to_send:
+                self.server.send(from_data(
+                    *to_send, perquisite.packet_type
+                ))
 
     def receive(self):
         try:
@@ -170,17 +198,85 @@ class Observer:
         try:
             self.send(self.ally, PacketType.MOVEMENT)
         except socket_error:
-            self.kill()
+            self.server.close()
             raise socket_error
 
         for s_id, s_x, s_y, s_a, pack_type in self.receive():
             if pack_type == PacketType.MOVEMENT:
                 self.enemy.set_position((s_x, s_y))
                 self.enemy.set_angle(s_a)
+            if pack_type == PacketType.DEFAULT:
+                self.enemy.render_objects.add(
+                    Perquisite(self.enemy, (s_x, s_y))
+                )
 
         # call AllySpaceShip.update() and EnemySpaceShip.update()
         self.group.update()
         self.group.draw(self.screen)  # draw objects
+
+        for spaceship in self.group:
+            spaceship.render_objects.draw(self.screen)
+
+
+class Perquisite(DynamicSprite):
+    def __init__(
+            self,
+            summoner, aim_point,
+            speed=SPACESHIPS_SPEED,
+            damage=10,
+            cool_down_time=0,
+            count_down_time=600,
+            packet_type=PacketType.DEFAULT
+    ):
+        aim_x, aim_y = aim_point
+        this_x, this_y = summoner.get_position()
+
+        delta_x = aim_x - this_x
+        delta_y = aim_y - this_y
+
+        angle = degrees(atan2(delta_y, delta_x))
+
+        super(Perquisite, self).__init__(
+            summoner.get_id(), summoner.get_position(),
+            angle, './Textures/bullet.png'
+        )
+        self.summoner = summoner
+        self.damage = damage
+        self.speed = speed
+        self.aim = aim_point
+        self.count_time = count_down_time
+        self.cool_down_time = cool_down_time
+        self.lifetime = 0
+        self.packet_type = packet_type
+        self.updated = False
+        self.set_angle(self.get_angle())  # for rotating image
+        self.last_used_time = cool_down_time
+        self.summoner.perks_ready.remove(Perquisite)
+
+    def update(self):
+        self.lifetime += 1000/FPS
+        self.move((
+            self.speed*cos(radians(self.get_angle())),
+            self.speed*sin(radians(self.get_angle()))
+        ))
+
+        # if self.lifetime - self.last_used_time > self.cool_down_time:
+        #     self.last_used_time = self.lifetime
+        #     self.summoner.perks_ready.append(Perquisite)
+
+        if self.lifetime >= self.count_time:
+            self.summoner.perks_ready.append(Perquisite)
+            self.kill()
+
+    @property
+    def information(self):
+        if not self.updated:
+            self.updated = True
+            i = self.get_id()
+            x, y = self.aim
+            a = self.get_angle()
+            return i, int(x), int(y), int(a)
+        return False
 
 
 if __name__ == '__main__':
