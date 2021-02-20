@@ -3,9 +3,9 @@ PACKET_SIZE = 8
 
 class PacketType:
     MOVEMENT = 0
-    SHOOT = 1
-    LASER = 2
-
+    DEFAULT = 1
+    EXPLOSIVE = 2
+    
 
 def from_bytes(packet: bytes):
     """

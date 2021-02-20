@@ -1,7 +1,7 @@
 import sys
 import pygame
 import pygame_gui
-from game_modules import Observer, FPS
+from objects import Observer, FPS
 
 
 class Window:
