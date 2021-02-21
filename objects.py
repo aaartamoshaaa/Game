@@ -58,7 +58,7 @@ class DynamicSprite(pygame.sprite.Sprite):
 
     # ---------------------------
 
-    def damage(self, damage):
+    def get_damage(self, damage):
         self.kill()
 
     @property
@@ -126,7 +126,7 @@ class AllySpaceShip(DynamicSprite):
 
         self.render_objects.update()
 
-    def damage(self, harm):
+    def get_damage(self, harm):
         self.health -= harm
         if self.health < 0:
             self.kill()
@@ -148,7 +148,7 @@ class EnemySpaceShip(DynamicSprite):
     def update(self):
         self.render_objects.update()
 
-    def damage(self, harm):
+    def get_damage(self, harm):
         self.health -= harm
         if self.health < 0:
             self.kill()
@@ -212,18 +212,13 @@ class Observer:
                 yield s_id, s_x, s_y, s_a, pack_type
 
     def kill(self):
-        try:
-            self.server.recv(1024)  # read all left data from server
-        except timeout:
-            pass
-        self.server.close()  # close connection
+        self.server.close()
 
     def update(self):
         try:
             self.send(self.ally, PacketType.MOVEMENT)
         except socket_error:
             self.kill()
-            raise socket_error
 
         for s_id, s_x, s_y, s_a, pack_type in self.receive():
             if pack_type == PacketType.MOVEMENT:
@@ -241,8 +236,12 @@ class Observer:
         for spaceship in self.group:
             spaceship.render_objects.draw(self.screen)
 
-        # update ALL_SPRITES
-        for obj in (*self.group, self.ally, self.enemy):
+        # update ALL_SPRITES)
+        for obj in (
+                *self.group,
+                *self.ally.render_objects,
+                *self.enemy.render_objects
+        ):
             if obj not in ALL_SPRITES:
                 ALL_SPRITES.add(obj)
 
@@ -308,9 +307,9 @@ class Perquisite(DynamicSprite):
             self.kill()
 
         for sprite in ALL_SPRITES:
-            if sprite != self.summoner:
+            if sprite != self.summoner and sprite != self:
                 if self.rect.colliderect(sprite.rect):
-                    sprite.damage(self.damage)
+                    sprite.get_damage(self.damage)
                     self.kill()
                     break
 
