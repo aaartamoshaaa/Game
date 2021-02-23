@@ -2,10 +2,10 @@ from protocol import from_bytes, PACKET_SIZE, from_data, PacketType
 from socket import socket, timeout, error as socket_error
 from math import atan2, degrees, radians, cos, sin
 from pygame.locals import *
+from balance import *
 import pygame
 
 FPS = 144
-SPACESHIPS_SPEED = 4
 ALL_SPRITES = pygame.sprite.Group()
 
 
@@ -14,6 +14,7 @@ class DynamicSprite(pygame.sprite.Sprite):
             self, object_id, position, angle, image, size
     ):
         super(DynamicSprite, self).__init__()
+        self.health = 1
         self._id = object_id
 
         self.image = pygame.image.load(image).convert_alpha()
@@ -58,8 +59,10 @@ class DynamicSprite(pygame.sprite.Sprite):
 
     # ---------------------------
 
-    def get_damage(self, damage):
-        self.kill()
+    def get_damage(self, harm):
+        self.health -= harm
+        if self.health <= 0:
+            self.kill()
 
     @property
     def information(self):
@@ -72,17 +75,17 @@ class DynamicSprite(pygame.sprite.Sprite):
 class AllySpaceShip(DynamicSprite):
     def __init__(self, object_id, position, angle):
         super(AllySpaceShip, self).__init__(
-            object_id, position, angle, './Textures/Ally.png', (70, 70)
+            object_id, position, angle, './Textures/Ally.png', SPACESHIPS_SIZE
         )
         self.perks_ready = []
         self.perks_info = {}
         self.render_objects = pygame.sprite.Group()
-        self.health = 100
+        self.health = SPACESHIPS_HEALTH
 
         # ---------------------------
 
-        self.perks_ready.append(Perquisite)
-        self.perks_info[Perquisite] = 0
+        self.perks_ready.append(Explosive)
+        self.perks_info[Explosive] = 0
 
         # ---------------------------
         self.speed = SPACESHIPS_SPEED
@@ -111,47 +114,31 @@ class AllySpaceShip(DynamicSprite):
         if keys[K_d]:
             self.move((self.speed, 0))
         if keys[K_q]:
-            if Perquisite in self.perks_ready:
+            if Explosive in self.perks_ready:
                 x, y = pygame.mouse.get_pos()
                 self.render_objects.add(
-                    Perquisite(self, (x, y))
-                )
-        if pygame.mouse.get_pressed(3)[0]:
-            if Perquisite in self.perks_ready:
-                x, y = pygame.mouse.get_pos()
-                self.render_objects.add(
-                    Perquisite(self, (x, y))
+                    Explosive(self, (x, y))
                 )
         # ---------------------------
 
         self.render_objects.update()
 
-    def get_damage(self, harm):
-        self.health -= harm
-        if self.health < 0:
-            self.kill()
-
 
 class EnemySpaceShip(DynamicSprite):
     def __init__(self, object_id, position, angle):
         super(EnemySpaceShip, self).__init__(
-            object_id, position, angle, './Textures/Enemy.png', (70, 70)
+            object_id, position, angle, './Textures/Enemy.png', SPACESHIPS_SIZE
         )
         self.speed = SPACESHIPS_SPEED
         self.perks_ready = []
         self.perks_info = {}
         self.render_objects = pygame.sprite.Group()
-        self.perks_ready.append(Perquisite)
-        self.perks_info[Perquisite] = 0
-        self.health = 100
+        self.perks_ready.append(Explosive)
+        self.perks_info[Explosive] = 0
+        self.health = SPACESHIPS_HEALTH
 
     def update(self):
         self.render_objects.update()
-
-    def get_damage(self, harm):
-        self.health -= harm
-        if self.health < 0:
-            self.kill()
 
 
 class Observer:
@@ -224,19 +211,19 @@ class Observer:
             if pack_type == PacketType.MOVEMENT:
                 self.enemy.set_position((s_x, s_y))
                 self.enemy.set_angle(s_a)
-            if pack_type == PacketType.DEFAULT:
+            if pack_type == PacketType.EXPLOSIVE:
                 self.enemy.render_objects.add(
-                    Perquisite(self.enemy, (s_x, s_y))
+                    Explosive(self.enemy, (s_x, s_y))
                 )
+
+        for spaceship in self.group:
+            spaceship.render_objects.draw(self.screen)
 
         # call AllySpaceShip.update() and EnemySpaceShip.update()
         self.group.update()
         self.group.draw(self.screen)  # draw objects
 
-        for spaceship in self.group:
-            spaceship.render_objects.draw(self.screen)
-
-        # update ALL_SPRITES)
+        # update ALL_SPRITES
         for obj in (
                 *self.group,
                 *self.ally.render_objects,
@@ -246,15 +233,57 @@ class Observer:
                 ALL_SPRITES.add(obj)
 
 
-class Perquisite(DynamicSprite):
+class AnimatedDynamicSprite(DynamicSprite):
+    def __init__(self, object_id, position, angle, image, size, animation_file,
+                 ticks_for_update, count_of_frames):
+        super(AnimatedDynamicSprite, self).__init__(
+            object_id, position, angle, image, size
+        )
+        self.ticks_for_update = ticks_for_update
+        self.count_of_frames = count_of_frames
+        self.last_tick_animate = 0
+        self.frames = []
+        sheet = pygame.image.load(animation_file)
+        self.rect = pygame.Rect(
+            0, 0,
+            sheet.get_width() // self.count_of_frames, sheet.get_height()
+        )
+        for i in range(self.count_of_frames):
+            frame_location = (self.rect.w * i, 0)
+            self.frames.append(
+                sheet.subsurface(pygame.Rect(frame_location, self.rect.size))
+            )
+        self.current_frame_id = 0
+        self.image = self.frames[self.current_frame_id]
+
+        self.move_to_on_touch = pygame.math.Vector2(
+            -self.rect.w // 2,
+            -self.rect.h // 2
+        )
+
+    def play_animation(self):
+        self.move(self.move_to_on_touch)
+        self.move_to_on_touch = pygame.math.Vector2(0, 0)
+
+        now = pygame.time.get_ticks()
+        if self.last_tick_animate + self.ticks_for_update < now:
+            self.last_tick_animate = now
+            self.current_frame_id += 1
+            is_end = self.current_frame_id >= len(self.frames)
+            if is_end:
+                self.kill()
+                return True
+            else:
+                self.image = self.frames[self.current_frame_id]
+        return False
+
+
+class Perquisite(AnimatedDynamicSprite):
     def __init__(
             self,
-            summoner, aim_point,
-            speed=SPACESHIPS_SPEED*3,
-            damage=10,
-            cool_down_time=100,
-            count_down_time=1500,
-            packet_type=PacketType.DEFAULT
+            summoner, aim_point, animation_image, speed, damage, cool_down_time,
+            count_down_time, packet_type, ticks_for_update, count_of_frames,
+            bullet_image, bullet_size
     ):
         aim_x, aim_y = aim_point
         this_x, this_y = summoner.get_position()
@@ -264,25 +293,30 @@ class Perquisite(DynamicSprite):
 
         angle = degrees(atan2(delta_y, delta_x))
 
-        super(self.__class__, self).__init__(
-            summoner.get_id(), summoner.get_position(),
-            angle, './Textures/bullet.png', (25, 25)
+        super(Perquisite, self).__init__(
+            object_id=summoner.get_id(), position=summoner.get_position(),
+            angle=angle, image=bullet_image, size=bullet_size,
+            animation_file=animation_image, ticks_for_update=ticks_for_update,
+            count_of_frames=count_of_frames
         )
-
+        # object
         self.summoner = summoner
         self.damage = damage
         self.speed = speed
         self.aim = aim_point
-
+        # time
         self.count_time = count_down_time
         self.cool_down_time = cool_down_time
         self.spawn_time = pygame.time.get_ticks()
-
+        # network
         self.packet_type = packet_type
+        # flags
+        self.can_mode = True
         self.updated = False
-
+        self.touch_something = None
+        # image
         self.set_angle(self.get_angle())  # for rotating image
-
+        # protect
         if self.__class__ in self.summoner.perks_ready:
             self.summoner.perks_ready.remove(self.__class__)
             self.summoner.perks_info[self.__class__] = pygame.time.get_ticks()
@@ -290,28 +324,41 @@ class Perquisite(DynamicSprite):
             self.kill()
 
     def update(self):
-        self.move((
-            self.speed*cos(radians(self.get_angle())),
-            self.speed*sin(radians(self.get_angle()))
-        ))
+        if self.touch_something:
+            self.animate_and_damage(self.touch_something)
+
+        for sprite in ALL_SPRITES:
+            if sprite != self.summoner and \
+                    not isinstance(sprite, self.__class__):
+                if self.rect.colliderect(sprite.rect):
+                    self.touch_something = sprite
+                    return
+
+        if self.can_mode:
+            self.move((
+                self.speed * cos(radians(self.get_angle())),
+                self.speed * sin(radians(self.get_angle()))
+            ))
 
         now = pygame.time.get_ticks()
-        if now - self.summoner.perks_info[Perquisite] > \
+        if now - self.summoner.perks_info[self.__class__] > \
                 self.cool_down_time:
-
-            if self.__class__ not in self.summoner.perks_ready:
-                self.summoner.perks_ready.append(self.__class__)
-                self.summoner.perks_info[self.__class__] = now
+            self.return_perk(now)
 
         if self.spawn_time + self.count_time < now:
             self.kill()
 
-        for sprite in ALL_SPRITES:
-            if sprite != self.summoner and sprite != self:
-                if self.rect.colliderect(sprite.rect):
-                    sprite.get_damage(self.damage)
-                    self.kill()
-                    break
+    def return_perk(self, last_time_used):
+        if self.__class__ not in self.summoner.perks_ready:
+            self.summoner.perks_ready.append(self.__class__)
+            self.summoner.perks_info[self.__class__] = last_time_used
+
+    def animate_and_damage(self, sprite):
+        self.can_mode = False
+        is_end = self.play_animation()
+        if is_end:
+            self.return_perk(pygame.time.get_ticks())
+            sprite.get_damage(self.damage)
 
     @property
     def information(self):
@@ -321,6 +368,23 @@ class Perquisite(DynamicSprite):
             x, y = self.aim
             a = self.get_angle()
             return i, int(x), int(y), int(a)
+
+
+class Explosive(Perquisite):
+    def __init__(self, summoner, aim_point):
+        super(Explosive, self).__init__(
+            summoner, aim_point,
+            animation_image=EXPLOSIVE_ANIMATION_IMAGE,
+            speed=EXPLOSIVE_BULLET_SPEED,
+            damage=EXPLOSIVE_DAMAGE,
+            cool_down_time=EXPLOSIVE_PERK_COOLDOWN,
+            count_down_time=EXPLOSIVE_PERK_COUNTDOWN,
+            packet_type=PacketType.EXPLOSIVE,
+            count_of_frames=EXPLOSIVE_ANIMATION_COUNT_OF_FRAMES,
+            ticks_for_update=EXPLOSIVE_ANIMATION_TICKS_PER_FRAME,
+            bullet_image=EXPLOSIVE_BULLET_IMAGE,
+            bullet_size=EXPLOSIVE_BULLET_SIZE
+        )
 
 
 if __name__ == '__main__':
