@@ -331,7 +331,9 @@ class Perquisite(AnimatedDynamicSprite):
             if sprite != self.summoner and \
                     not isinstance(sprite, self.__class__):
                 if self.rect.colliderect(sprite.rect):
-                    self.touch_something = sprite
+                    if not self.touch_something:
+                        self.touch_something = sprite
+                        sprite.get_damage(self.damage)
                     return
 
         if self.can_mode:
@@ -358,7 +360,6 @@ class Perquisite(AnimatedDynamicSprite):
         is_end = self.play_animation()
         if is_end:
             self.return_perk(pygame.time.get_ticks())
-            sprite.get_damage(self.damage)
 
     @property
     def information(self):
