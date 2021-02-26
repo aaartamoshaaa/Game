@@ -2,7 +2,7 @@
 from interface import UI, UIElement, Padding, Margin
 from pygame_gui.elements import UILabel, UIButton, UITextEntryLine
 # handlers
-from interface import main_menu_events_handler, \
+from interface import exit_button_handler, \
     change_interface, quit_from_game, load_game, exit_event_handler
 # game objects
 from interface import Game
@@ -26,7 +26,7 @@ game.add_interface(
 # main menu buttons
 game.add_handler(
     interface_name='main',
-    handler=main_menu_events_handler
+    handler=lambda event: exit_button_handler(event, 'exit-button')
 )
 # ip entry menu
 game.add_interface(
@@ -75,8 +75,10 @@ game.add_interface(
     interface=UI(
         elements=[
             UIElement(UILabel, 300, 100, text='Game over'),
-            UIElement(UIButton, 300, 100, text='Play again',
-                      ui_id='play-again-button')
+            UIElement(UIButton, 300, 50, text='Play again',
+                      ui_id='play-again-button'),
+            UIElement(UIButton, 300, 50, text='exit',
+                      ui_id='reconnect-exit-button')
         ],
         margin=Margin.only(bottom=20),
         padding=Padding.all(50),
@@ -95,7 +97,11 @@ game.add_handler(
 )
 game.add_handler(
     'reconnect',
-    lambda event: load_game(event, game, already_loaded=True)
+    lambda event: change_interface(event, 'play-again-button', game, 'ip-entry')
+)
+game.add_handler(
+    'reconnect',
+    lambda event: exit_button_handler(event, 'reconnect-exit-button')
 )
 # ip entry -> game
 game.add_handler(

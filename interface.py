@@ -148,14 +148,6 @@ def main_handler(event):
                 sys.exit(0)
 
 
-def main_menu_events_handler(event):
-    if event.type == pygame.USEREVENT:
-        if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
-            if event.ui_object_id == 'exit-button':
-                pygame.quit()
-                sys.exit(0)
-
-
 def exit_event_handler(event):
     if event.type == pygame.QUIT:
         pygame.quit()
@@ -169,11 +161,10 @@ def change_interface(event, button_id, game_object, new_interface_name):
                 game_object.set_interface(new_interface_name)
 
 
-def load_game(event, game, already_loaded=False):
+def load_game(event, game):
     # !!! WARNING !!!
-    if event.type == pygame.USEREVENT or already_loaded:
-        if event.user_type == pygame_gui.UI_TEXT_ENTRY_FINISHED or \
-                already_loaded:
+    if event.type == pygame.USEREVENT:
+        if event.user_type == pygame_gui.UI_TEXT_ENTRY_FINISHED:
             game.set_interface('waiting')
             ip, port = event.text.split(':')
             port = int(port)
@@ -189,21 +180,30 @@ def update(observer, game):
     if observer.is_end:
         end_observer(game)
         game.set_interface('reconnect')
+        game.delete_all_render_methods()
     if observer.is_game_active:
-        game.set_interface('game')
+        if game.current_interface != game.interfaces['game']:
+            game.set_interface('game')
 
 
 def end_observer(game):
     if game.additional_objects.get('obs'):
         game.additional_objects['obs'].kill()
         del (game.additional_objects['obs'])
-    # game.delete_all_render_methods()
 
 
 def quit_from_game(event, game):
     if event.type == pygame.QUIT:
         end_observer(game)
         sys.exit(0)
+
+
+def exit_button_handler(event, button):
+    if event.type == pygame.USEREVENT:
+        if event.user_type == pygame_gui.UI_BUTTON_PRESSED:
+            if event.ui_object_id == button:
+                pygame.quit()
+                sys.exit(0)
 
 
 class Game:

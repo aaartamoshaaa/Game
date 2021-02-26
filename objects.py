@@ -2,7 +2,7 @@ from protocol import from_bytes, PACKET_SIZE, from_data, PacketType
 from socket import socket, timeout, error as socket_error
 from math import atan2, degrees, radians, cos, sin
 from pygame.locals import *
-from balance import *
+from global_variables import *
 import pygame
 
 FPS = 144
@@ -222,6 +222,7 @@ class Observer:
                     from_data(self.enemy.get_id(), 0, 0, 0, PacketType.DEATH)
                 )
                 self.is_end = True
+                self.is_game_active = False
                 for sprite in self.group:
                     sprite.kill()
                 self.kill()
@@ -411,27 +412,3 @@ class Explosive(Perquisite):
             bullet_image=EXPLOSIVE_BULLET_IMAGE,
             bullet_size=EXPLOSIVE_BULLET_SIZE
         )
-
-
-if __name__ == '__main__':
-    pygame.init()
-    fps_clock = pygame.time.Clock()
-    from interface import Window, Theme
-
-    display = pygame.display.set_mode(Window.size)
-    observer = Observer(display)
-
-    observer.connect(('92.242.40.206', 255))
-
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                exit(0)
-
-        display.fill((50, 50, 50))
-
-        observer.update()
-
-        pygame.display.update()
-        fps_clock.tick(FPS)
