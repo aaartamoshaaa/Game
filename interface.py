@@ -73,14 +73,14 @@ class UI:
     Left = 4
 
     def __init__(
-        self,
-        elements,
-        width=Window.width,
-        height=Window.height,
-        hor_layout=Right,
-        ver_layout=Top,
-        margin=Margin.all(0),
-        padding=Padding.all(0)
+            self,
+            elements,
+            width=Window.width,
+            height=Window.height,
+            hor_layout=Right,
+            ver_layout=Top,
+            margin=Margin.all(0),
+            padding=Padding.all(0)
     ):
         self.manager = pygame_gui.UIManager((width, height), Theme.file)
         self.handlers = []
@@ -89,7 +89,7 @@ class UI:
         y_cords = []
         # * Horizontal layout
         if hor_layout == UI.Center:
-            x_cords = [(width - element.width)/2 for element in elements]
+            x_cords = [(width - element.width) / 2 for element in elements]
         elif hor_layout == UI.Right:
             last_x = width - padding.right
             for element in elements:
@@ -127,7 +127,7 @@ class UI:
 
     def draw(self, screen):
         self.handle_events()
-        self.manager.update(1000/FPS)
+        self.manager.update(1000 / FPS)
         self.manager.draw_ui(screen)
 
     def add_handler(self, function):
@@ -169,22 +169,40 @@ def change_interface(event, button_id, game_object, new_interface_name):
                 game_object.set_interface(new_interface_name)
 
 
-def load_game(event, game):
-    if event.type == pygame.USEREVENT:
-        if event.user_type == pygame_gui.UI_TEXT_ENTRY_FINISHED:  
-            game.set_interface('game')
+def load_game(event, game, already_loaded=False):
+    # !!! WARNING !!!
+    if event.type == pygame.USEREVENT or already_loaded:
+        if event.user_type == pygame_gui.UI_TEXT_ENTRY_FINISHED or \
+                already_loaded:
+            game.set_interface('waiting')
             ip, port = event.text.split(':')
             port = int(port)
             observer = Observer(game.get_screen())
             observer.connect((ip, port))
-            game.add_render_method(observer.update)
+            game.add_render_method(lambda: update(observer, game))
             game.add_additional_object('obs', observer)
+    # !!! WARNING !!!
+
+
+def update(observer, game):
+    observer.update()
+    if observer.is_end:
+        end_observer(game)
+        game.set_interface('reconnect')
+    if observer.is_game_active:
+        game.set_interface('game')
+
+
+def end_observer(game):
+    if game.additional_objects.get('obs'):
+        game.additional_objects['obs'].kill()
+        del (game.additional_objects['obs'])
+    # game.delete_all_render_methods()
 
 
 def quit_from_game(event, game):
     if event.type == pygame.QUIT:
-        if game.additional_objects['obs']:
-            game.additional_objects['obs'].kill()
+        end_observer(game)
         sys.exit(0)
 
 
@@ -235,6 +253,9 @@ class Game:
                 render_method()
             pygame.display.update()
             self.clock.tick(FPS)
+
+    def delete_all_render_methods(self):
+        self.render_methods = []
 
     def add_render_method(self, method):
         self.render_methods.append(method)

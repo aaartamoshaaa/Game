@@ -149,6 +149,8 @@ class Observer:
         self.timeout = 0.01
         self.max_packets = 2
         self.group = pygame.sprite.Group()
+        self.is_end = False
+        self.is_game_active = False
 
     def connect(self, address):
         self.server.settimeout(self.long_timeout)
@@ -174,9 +176,14 @@ class Observer:
         self.group.add(self.enemy)
 
     def send(self, spaceship, packet_type):
-        byte_data = from_data(
-            *spaceship.information, packet_type
-        )
+        if spaceship in self.group:
+            byte_data = from_data(
+                *spaceship.information, packet_type
+            )
+        else:
+            # sprite is killed
+            byte_data = from_data(spaceship.get_id(), 0, 0, 0, PacketType.DEATH)
+
         self.server.send(byte_data)
 
         for perquisite in spaceship.render_objects:
@@ -191,6 +198,8 @@ class Observer:
             data = self.server.recv(self.max_packets * PACKET_SIZE)
         except timeout:  # if no data from server
             return
+        except OSError:
+            return
         else:
             for i in range(0, len(data), PACKET_SIZE):
                 s_id, s_x, s_y, s_a, pack_type = from_bytes(
@@ -202,12 +211,20 @@ class Observer:
         self.server.close()
 
     def update(self):
-        try:
-            self.send(self.ally, PacketType.MOVEMENT)
-        except socket_error:
-            self.kill()
-
         for s_id, s_x, s_y, s_a, pack_type in self.receive():
+            if pack_type == PacketType.ALL_CONNECTED:
+                self.server.send(
+                    from_data(0, 0, 0, 0, PacketType.ALL_CONNECTED)
+                )
+                self.is_game_active = True
+            if pack_type == PacketType.DEATH:
+                self.server.send(
+                    from_data(self.enemy.get_id(), 0, 0, 0, PacketType.DEATH)
+                )
+                self.is_end = True
+                for sprite in self.group:
+                    sprite.kill()
+                self.kill()
             if pack_type == PacketType.MOVEMENT:
                 self.enemy.set_position((s_x, s_y))
                 self.enemy.set_angle(s_a)
@@ -216,12 +233,20 @@ class Observer:
                     Explosive(self.enemy, (s_x, s_y))
                 )
 
+        if not self.is_game_active or self.is_end:
+            return
+
         for spaceship in self.group:
             spaceship.render_objects.draw(self.screen)
 
         # call AllySpaceShip.update() and EnemySpaceShip.update()
         self.group.update()
         self.group.draw(self.screen)  # draw objects
+
+        try:
+            self.send(self.ally, PacketType.MOVEMENT)
+        except socket_error:
+            self.kill()
 
         # update ALL_SPRITES
         for obj in (

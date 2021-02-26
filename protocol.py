@@ -5,7 +5,9 @@ class PacketType:
     MOVEMENT = 0
     DEFAULT = 1
     EXPLOSIVE = 2
-    
+    ALL_CONNECTED = 10
+    DEATH = 11
+
 
 def from_bytes(packet: bytes):
     """

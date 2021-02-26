@@ -7,7 +7,6 @@ from interface import main_menu_events_handler, \
 # game objects
 from interface import Game
 
-
 game = Game()
 # main menu
 game.add_interface(
@@ -48,27 +47,56 @@ game.add_interface(
 game.add_handler(
     interface_name='main',
     handler=lambda event:
-        change_interface(event, 'play-button', game, 'ip-entry')
+    change_interface(event, 'play-button', game, 'ip-entry')
 )
 game.add_handler(
     interface_name='ip-entry',
     handler=lambda event:
-        change_interface(event, 'return', game, 'main')
+    change_interface(event, 'return', game, 'main')
 )
 # main - 1st interface
 game.set_interface('main')
 
 # game menu
 game.add_interface(
+    name='waiting',
+    interface=UI(
+        elements=[
+            UIElement(UILabel, 300, 100, text='Wait for second user')
+        ],
+        padding=Padding.all(50),
+        margin=Margin.all(0),
+        hor_layout=UI.Center
+    )
+)
+
+game.add_interface(
+    name='reconnect',
+    interface=UI(
+        elements=[
+            UIElement(UILabel, 300, 100, text='Game over'),
+            UIElement(UIButton, 300, 100, text='Play again',
+                      ui_id='play-again-button')
+        ],
+        margin=Margin.only(bottom=20),
+        padding=Padding.all(50),
+        hor_layout=UI.Center,
+        ver_layout=UI.Top
+    )
+)
+
+game.add_interface(
     name='game',
-    interface=UI(elements=[]),
-    need_to_update_handlers=False  # we don`t need global handlers here
+    interface=UI(elements=[UIElement(UILabel, 300, 100, text='', visible=0)]),
 )
 game.add_handler(
     interface_name='game',
     handler=lambda event: quit_from_game(event, game)
 )
-
+game.add_handler(
+    'reconnect',
+    lambda event: load_game(event, game, already_loaded=True)
+)
 # ip entry -> game
 game.add_handler(
     interface_name='ip-entry',

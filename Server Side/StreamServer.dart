@@ -38,6 +38,9 @@ void registerClient(Socket client) {
       fromData(enemy_id, spawns[enemy_id][0], spawns[enemy_id][1], 0, 0);
   client.add(rival_data);
   client.add(enemy_data);
+
+  if (IDS.isEmpty) client.add(fromData(0, 0, 0, 0, ALL_CONNECTED));
+
   clients.add(Client(client, rival_id));
 }
 
@@ -71,8 +74,7 @@ class Client {
 
   void removeClient() {
     this.socket.close();
-    var client_data =
-        '${this.socket.remoteAddress.address}:${this.socket.remotePort}';
+    var client_data = '${this.address}:${this.port}';
     var isSuccessfully = clients.remove(this);
     IDS.add(this.id);
     print('$client_data >>> Return id ${this.id}');
@@ -84,7 +86,7 @@ class Client {
   }
 
   void messageHandler(Uint8List bytes) {
-    this.distributeMessage(this, bytes);
+    distributeMessage(this, bytes);
   }
 
   void distributeMessage(Client client, Uint8List data) {
@@ -93,7 +95,7 @@ class Client {
         try {
           c.socket.add(data);
         } catch (SocketException) {
-          this.removeClient();
+          removeClient();
         }
       }
     }
