@@ -113,7 +113,7 @@ class AllySpaceShip(DynamicSprite):
             self.move((-self.speed, 0))
         if keys[K_d]:
             self.move((self.speed, 0))
-        if keys[K_q]:
+        if pygame.mouse.get_pressed(3)[0]:
             if Explosive in self.perks_ready:
                 x, y = pygame.mouse.get_pos()
                 self.render_objects.add(
