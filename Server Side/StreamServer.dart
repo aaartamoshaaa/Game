@@ -76,7 +76,7 @@ class Client {
     this.socket.close();
     var client_data = '${this.address}:${this.port}';
     var isSuccessfully = clients.remove(this);
-    IDS.add(this.id);
+    if (!IDS.contains(this.id)) IDS.add(this.id);
     print('$client_data >>> Return id ${this.id}');
     if (isSuccessfully) {
       print('$client_data >>> Removed successully');
